@@ -1,3 +1,4 @@
+import secrets
 from .auth import register_auth_routes
 from pathlib import Path
 from flask import Flask
@@ -7,6 +8,7 @@ from .database import setup_database
 
 def create_app(test_config=None):
     app = Flask(__name__)
+    app.secret_key = secrets.token_hex(16)
 
     #Configure the database location
     app.config['DATABASE'] = 'database/gameforum.db'

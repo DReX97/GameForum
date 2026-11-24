@@ -70,6 +70,55 @@ class AuthTests(unittest.TestCase):
             response.data
         )
 
+    
+    def test_login(self):
+        user_data = {
+            'username': 'gamer1',
+            'password': 'ExamplePassword123!'
+        }
+
+        self.client.post('/register', data=user_data)
+
+        response = self.client.post(
+            '/login', data=user_data, follow_redirects=True
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Logged in as gamer1', response.data)
+
+    def test_invalid_login(self):
+        self.client.post('/register', data={
+            'username': 'gamer1',
+            'password': 'ExamplePassword123!'
+        })
+
+        response = self.client.post('/login', data={
+            'username': 'gamer1',
+            'password': 'WrongPassword'
+        })
+
+        self.assertIn(b'Invalid username or password.', response.data)
+
+        with self.client.session_transaction() as session:
+            self.assertNotIn('user_id', session)
+
+    def test_logout(self):
+        user_data = {
+            'username': 'gamer1',
+            'password': 'ExamplePassword123!'
+        }
+
+        self.client.post('/register', data=user_data)
+        self.client.post('/login', data=user_data)
+
+        response = self.client.post('/logout', follow_redirects=True)
+
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as session:
+            self.assertNotIn('user_id', session)
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -40,3 +40,35 @@ def register_auth_routes(app):
                     conn.close()
 
         return render_template('register.html', error=error, registered=registered)
+
+
+    #Authenticate the user
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        error = None
+
+        if request.method == 'POST':
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+
+            conn = get_connection()
+            user = conn.execute("SELECT * FROM users WHERE username = ?",
+                (username,)).fetchone()
+            conn.close()
+
+            if user is None or not check_password_hash( user['password_hash'], password):
+                error = "Invalid username or password."
+            else:
+                session.clear()
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+
+                return redirect(url_for('home'))
+
+        return render_template('login.html', error=error)
+
+    #Log the user out
+    @app.route('/logout', methods=['POST'])
+    def logout():
+        session.clear()
+        return redirect(url_for('home'))

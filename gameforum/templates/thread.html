@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ thread['title'] }} - GameForum</title>
+</head>
+<body>
+    <h1>{{ thread['title'] }}</h1>
+
+    <p>Category: {{ thread['category'] }}</p>
+    <p>{{ thread['content'] }}</p>
+
+    <h2>Comments</h2>
+
+    {# Display comments and their authors #}
+    {% for comment in comments %}
+        <article>
+            <strong>{{ comment['username'] }}</strong>
+            <p>{{ comment['content'] }}</p>
+        </article>
+    {% endfor %}
+
+    {% if not comments %}
+        <p>No comments yet.</p>
+    {% endif %}
+
+    {% if error %}
+        <p>{{ error }}</p>
+    {% endif %}
+
+    {# Only display the comment form to authenticated users #}
+    {% if username %}
+        <form method="POST">
+            <label for="content">Leave a comment:</label>
+
+            <textarea id="content" name="content"maxlength="1000" required></textarea>
+
+            <button type="submit">Post Comment</button>
+        </form>
+    {% else %}
+        <p><a href="/login">Login</a> to leave a comment.</p>
+    {% endif %}
+
+    <p><a href="/">Back to GameForum</a></p>
+</body>
+</html>

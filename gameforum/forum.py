@@ -1,4 +1,4 @@
-from flask import render_template, session, request, redirect, url_for
+from flask import render_template, session, request, redirect, url_for, abort
 from .database import get_connection
 
 def register_routes(app):
@@ -71,3 +71,64 @@ def register_routes(app):
                 return redirect(url_for('home'))
 
         return render_template('create_thread.html', error=error, categories=categories)
+
+    #Display an individual discussion and handle comments
+    @app.route('/threads/<int:thread_id>', methods=['GET', 'POST'])
+    def view_thread(thread_id):
+        error = None
+        conn = get_connection()
+
+        try:
+            # Retrieve the requested discussion
+            thread = conn.execute(
+                "SELECT * FROM threads WHERE id = ?",
+                (thread_id,)
+            ).fetchone()
+
+            # Return 404 if the discussion does not exist
+            if thread is None:
+                abort(404)
+
+            if request.method == 'POST':
+
+                #only authenticated users can submit comments
+                if 'user_id' not in session:
+                    return redirect(url_for('login'))
+
+                content = request.form.get('content', '').strip()
+
+                #validate comment content on the server
+                if not content or len(content) > 1000:
+                    error = "Please enter a valid comment."
+                else:
+                    # Safely store the comment using SQL parameters
+                    conn.execute(
+                        "INSERT INTO comments (thread_id, user_id, content) VALUES (?, ?, ?)",
+                        (thread_id, session['user_id'], content)
+                    )
+
+                    conn.commit()
+
+                    return redirect(url_for(
+                        'view_thread', thread_id=thread_id
+                    ))
+
+            #retrieve comments and their authors
+            comments = conn.execute("""
+                SELECT comments.content, users.username
+                FROM comments
+                JOIN users ON comments.user_id = users.id
+                WHERE comments.thread_id = ?
+            """, (thread_id,)).fetchall()
+
+        finally:
+            conn.close()
+
+        return render_template(
+            'thread.html',
+            thread=thread,
+            comments=comments,
+            username=session.get('username'),
+            error=error
+        )
+

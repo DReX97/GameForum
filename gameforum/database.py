@@ -5,6 +5,8 @@ from flask import current_app
 def get_connection():
     conn = sqlite3.connect(current_app.config['DATABASE'])
     conn.row_factory = sqlite3.Row
+    #Enforce relationships between database tables
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -26,6 +28,18 @@ def setup_database():
             title TEXT NOT NULL,
             category TEXT NOT NULL,
             content TEXT NOT NULL
+        )
+    """)
+
+    #Store comments associated with discussions and users
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            thread_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            FOREIGN KEY (thread_id) REFERENCES threads(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
 

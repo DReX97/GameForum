@@ -115,6 +115,87 @@ class ForumTests(unittest.TestCase):
         self.assertIn(b'Please select a valid category.', response.data)
 
 
+    # Create a sample discussion in the temporary database
+    def create_test_thread(self):
+        with self.app.app_context():
+            conn = get_connection()
+
+            cursor = conn.execute(
+                "INSERT INTO threads (title, category, content) VALUES (?, ?, ?)",
+                ('Cyberpunk', 'RPG', 'New game coming')
+            )
+
+            thread_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+
+            return thread_id
+
+    #Register and authenticate a test user
+    def login_test_user(self):
+        user_data = {
+            'username': 'gamer1',
+            'password': 'ExamplePassword123!'
+        }
+
+        self.client.post('/register', data=user_data)
+        self.client.post('/login', data=user_data)
+
+    def test_view_thread(self):
+        thread_id = self.create_test_thread()
+
+        response = self.client.get(f'/threads/{thread_id}')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Cyberpunk', response.data)
+        self.assertIn(b'New game coming', response.data)
+
+    def test_create_comment(self):
+        thread_id = self.create_test_thread()
+        self.login_test_user()
+
+        response = self.client.post(
+            f'/threads/{thread_id}',
+            data={'content': 'Looking forward to this game!'},
+            follow_redirects=True
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Looking forward to this game!', response.data)
+        self.assertIn(b'gamer1', response.data)
+
+    def test_guest_cannot_comment(self):
+        thread_id = self.create_test_thread()
+
+        #attempt to submit a comment without authentication
+        response = self.client.post(
+            f'/threads/{thread_id}',
+            data={'content': 'Guest comment'}
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.location, '/login')
+
+        #verify that the comment was not stored
+        response = self.client.get(f'/threads/{thread_id}')
+        self.assertNotIn(b'Guest comment', response.data)
+
+    def test_invalid_comment(self):
+        thread_id = self.create_test_thread()
+        self.login_test_user()
+
+        #verify that empty comments are rejected
+        response = self.client.post(
+            f'/threads/{thread_id}',
+            data={'content': ''}
+        )
+
+        self.assertIn(b'Please enter a valid comment.', response.data)
+
+    def test_thread_not_found(self):
+        response = self.client.get('/threads/999999')
+
+        self.assertEqual(response.status_code, 404)
 
 if __name__ == '__main__':
     unittest.main()

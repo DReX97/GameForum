@@ -10,8 +10,8 @@ def create_app(test_config=None):
     app = Flask(__name__)
     app.secret_key = secrets.token_hex(16)
 
-    #Configure the database location
-    app.config['DATABASE'] = 'database/gameforum.db'
+    #Use a separate database for vulverability demo
+    app.config['DATABASE'] = 'database/gameforum_insecure.db'
 
     #Allow tests to use a separate database
     if test_config is not None:
